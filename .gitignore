@@ -1,0 +1,21 @@
+﻿# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Ortam ve gizli ayarlar
+.env
+
+# SUMO çıktıları (büyük dosyalar)
+*.log
+sumo/output/
+experiments/raw/
+
+# Docker veri klasörleri
+data/
+
+# IDE
+.vscode/
+.idea/
+.DS_Store

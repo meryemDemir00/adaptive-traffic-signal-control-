@@ -20,7 +20,7 @@ CHECKPOINT = os.environ.get("SPARK_CHECKPOINT_DIR", "/tmp/checkpoints/metrics")
 COLS = [
     "run_id", "tls_id", "scenario", "mode", "window_start_ms", "window_end_ms", "sim_time_end",
     "last_produced_at_ms", "spark_out_at_ms", "avg_queue", "avg_queue_main",
-    "avg_queue_side", "avg_wait", "avg_speed", "avg_occupancy",
+    "avg_queue_side", "avg_wait", "avg_speed", "avg_occupancy, "n_records",
 ]
 
 RAW_SCHEMA = T.StructType([
@@ -70,6 +70,7 @@ agg = (
     .agg(
         F.first("scenario").alias("scenario"),
         F.first("mode").alias("mode"),
+        F.count(F.lit(1)).alias("n_records"),
         F.max("sim_time").alias("sim_time_end"),
         F.max("produced_at_ms").alias("last_produced_at_ms"),
         F.avg("total_halting").alias("avg_queue"),
@@ -96,6 +97,7 @@ metrics = agg.select(
     "avg_wait",
     "avg_speed",
     "avg_occupancy",
+    "n_records",
 )
 
 

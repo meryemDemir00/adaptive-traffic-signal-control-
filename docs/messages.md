@@ -80,6 +80,7 @@ Pencere: 10 simülasyon saniyesi, `run\_id` + `tls\_id` kırılımında.
 |`avg\_wait`|float|Pencere ortalaması `avg\_waiting\_time` (s)|
 |`avg\_speed`|float|Pencere ortalaması `avg\_speed` (m/s)|
 |`avg\_occupancy`|float|Pencere ortalaması `avg\_occupancy` (%)|
+| `n_records` | int | Penceredeki ham kayıt sayısı (sistem metrikleri için) |
 
 Spark yalnızca bu ortalamaları hesaplar. Düşük/orta/yüksek sınıflaması controller'da yapılır (analiz ve kontrol katmanları ayrı).
 

@@ -1,0 +1,339 @@
+{
+  "uid": "traffic-adaptive",
+  "title": "Adaptif Trafik Sinyal Kontrolu",
+  "tags": [
+    "traffic",
+    "sumo"
+  ],
+  "timezone": "utc",
+  "editable": true,
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "time": {
+    "from": "1970-01-01T00:00:00.000Z",
+    "to": "1970-01-01T01:00:00.000Z"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "run_id",
+        "label": "Kosu (run_id)",
+        "type": "query",
+        "datasource": {
+          "type": "grafana-clickhouse-datasource",
+          "uid": "clickhouse"
+        },
+        "query": "SELECT run_id FROM traffic.metrics GROUP BY run_id ORDER BY max(window_end_ms) DESC",
+        "refresh": 1,
+        "sort": 0,
+        "multi": false,
+        "includeAll": false,
+        "current": {}
+      }
+    ]
+  },
+  "annotations": {
+    "list": []
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "table",
+      "title": "Anlik durum (son pencere ve secili plan)",
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse"
+          },
+          "editorType": "sql",
+          "format": 0,
+          "queryType": "table",
+          "rawSql": "SELECT m.tls_id AS Kavsak, round(m.avg_queue, 1) AS Kuyruk, round(m.avg_wait, 1) AS Bekleme_s, round(m.avg_speed, 1) AS Hiz_ms, ifNull(c.program_id, '0') AS Plan FROM (SELECT tls_id, argMax(avg_queue, window_end_ms) AS avg_queue, argMax(avg_wait, window_end_ms) AS avg_wait, argMax(avg_speed, window_end_ms) AS avg_speed FROM traffic.metrics WHERE run_id='${run_id}' GROUP BY tls_id) AS m LEFT JOIN (SELECT tls_id, argMax(program_id, decided_at_ms) AS program_id FROM traffic.control_events WHERE run_id='${run_id}' GROUP BY tls_id) AS c ON m.tls_id = c.tls_id ORDER BY Kavsak",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Kuyruk uzunlugu (duran arac, 10 sn pencere ortalamasi)",
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "lineWidth": 2,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse"
+          },
+          "editorType": "sql",
+          "format": 2,
+          "queryType": "timeseries",
+          "rawSql": "SELECT toDateTime(toUInt32(sim_time_end), 'UTC') AS time, maxIf(avg_queue, tls_id='B0') AS B0, maxIf(avg_queue, tls_id='C0') AS C0, maxIf(avg_queue, tls_id='C1') AS C1 FROM traffic.metrics WHERE run_id='${run_id}' GROUP BY time ORDER BY time",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Ortalama bekleme suresi (s)",
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "lineWidth": 2,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse"
+          },
+          "editorType": "sql",
+          "format": 2,
+          "queryType": "timeseries",
+          "rawSql": "SELECT toDateTime(toUInt32(sim_time_end), 'UTC') AS time, maxIf(avg_wait, tls_id='B0') AS B0, maxIf(avg_wait, tls_id='C0') AS C0, maxIf(avg_wait, tls_id='C1') AS C1 FROM traffic.metrics WHERE run_id='${run_id}' GROUP BY time ORDER BY time",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Secili sinyal plani (kontrol degisiklikleri)",
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "lineWidth": 2,
+            "showPoints": "always",
+            "spanNulls": true,
+            "lineInterpolation": "stepAfter"
+          },
+          "min": 0,
+          "max": 2,
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "0 varsayilan",
+                  "index": 0
+                },
+                "1": {
+                  "text": "1 ana yon",
+                  "index": 1
+                },
+                "2": {
+                  "text": "2 yan yon",
+                  "index": 2
+                }
+              }
+            }
+          ],
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse"
+          },
+          "editorType": "sql",
+          "format": 2,
+          "queryType": "timeseries",
+          "rawSql": "SELECT toDateTime(toUInt32(applied_sim_time), 'UTC') AS time, maxIf(toInt32OrNull(program_id), tls_id='B0') AS B0, maxIf(toInt32OrNull(program_id), tls_id='C0') AS C0, maxIf(toInt32OrNull(program_id), tls_id='C1') AS C1 FROM traffic.control_events WHERE run_id='${run_id}' GROUP BY time ORDER BY time",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Gecikme (ms): Spark asamasi ve uctan uca",
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "lineWidth": 2,
+            "showPoints": "auto",
+            "spanNulls": false
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse"
+          },
+          "editorType": "sql",
+          "format": 2,
+          "queryType": "timeseries",
+          "rawSql": "SELECT toDateTime(toUInt32(sim_time_end), 'UTC') AS time, avg(spark_out_at_ms - last_produced_at_ms) AS spark_gecikme_ms FROM traffic.metrics WHERE run_id='${run_id}' GROUP BY time ORDER BY time",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse"
+          },
+          "editorType": "sql",
+          "format": 2,
+          "queryType": "timeseries",
+          "rawSql": "SELECT toDateTime(toUInt32(applied_sim_time), 'UTC') AS time, max(applied_at_ms - source_produced_at_ms) AS uctan_uca_gecikme_ms FROM traffic.control_events WHERE run_id='${run_id}' GROUP BY time ORDER BY time",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "table",
+      "title": "Kontrol degisiklikleri zaman cizelgesi",
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 16,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse"
+          },
+          "editorType": "sql",
+          "format": 0,
+          "queryType": "table",
+          "rawSql": "SELECT toUInt32(applied_sim_time) AS Sim_zamani_s, tls_id AS Kavsak, program_id AS Plan, reason AS Neden, applied_at_ms - source_produced_at_ms AS Gecikme_ms FROM traffic.control_events WHERE run_id='${run_id}' ORDER BY applied_sim_time, tls_id",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}

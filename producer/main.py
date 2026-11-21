@@ -1,0 +1,228 @@
+﻿import argparse
+import json
+import os
+import sys
+import threading
+import time
+from pathlib import Path
+
+import yaml
+
+# SUMO_HOME/tools yolunu Python path'e ekle
+if "SUMO_HOME" in os.environ:
+    tools = os.path.join(os.environ["SUMO_HOME"], "tools")
+    if tools not in sys.path:
+        sys.path.append(tools)
+else:
+    sys.exit("HATA: SUMO_HOME ortam degiskeni tanimli degil.")
+
+import traci  # noqa: E402
+
+
+def now_ms() -> int:
+    return int(time.time() * 1000)
+
+
+def load_approaches(config_path: str) -> dict:
+    with open(config_path, "r", encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+    return data["intersections"]
+
+
+def collect_intersection_metrics(
+    tls_id: str,
+    lanes_cfg: dict,
+    run_id: str,
+    scenario: str,
+    mode: str,
+    seed: int,
+    sim_time: float,
+    run_start_ms: int,
+) -> dict:
+    main_lanes = lanes_cfg.get("main", [])
+    side_lanes = lanes_cfg.get("side", [])
+    all_lanes = main_lanes + side_lanes
+
+    queue_main = sum(traci.lane.getLastStepHaltingNumber(l) for l in main_lanes)
+    queue_side = sum(traci.lane.getLastStepHaltingNumber(l) for l in side_lanes)
+    total_halting = queue_main + queue_side
+
+    vehicle_count = sum(traci.lane.getLastStepVehicleNumber(l) for l in all_lanes)
+
+    # Ortalama hiz, bekleme suresi ve doluluk (0-100 arasi yuzde)
+    if all_lanes:
+        avg_speed = sum(traci.lane.getLastStepMeanSpeed(l) for l in all_lanes) / len(all_lanes)
+        avg_occupancy = sum(traci.lane.getLastStepOccupancy(l) for l in all_lanes) / len(all_lanes)
+        total_wait = sum(traci.lane.getWaitingTime(l) for l in all_lanes)
+        avg_waiting_time = (total_wait / vehicle_count) if vehicle_count > 0 else 0.0
+    else:
+        avg_speed = 0.0
+        avg_occupancy = 0.0
+        avg_waiting_time = 0.0
+
+    event_time_ms = int(run_start_ms + sim_time * 1000)
+
+    return {
+        "run_id": run_id,
+        "scenario": scenario,
+        "mode": mode,
+        "seed": seed,
+        "sim_time": round(sim_time, 2),
+        "event_time_ms": event_time_ms,
+        "produced_at_ms": now_ms(),
+        "tls_id": tls_id,
+        "total_halting": int(total_halting),
+        "queue_main": int(queue_main),
+        "queue_side": int(queue_side),
+        "avg_waiting_time": round(avg_waiting_time, 2),
+        "avg_speed": round(avg_speed, 2),
+        "avg_occupancy": round(avg_occupancy, 2),
+        "vehicle_count": int(vehicle_count),
+    }
+
+
+def start_control_listener(
+    bootstrap_servers: str,
+    control_topic: str,
+    run_id: str,
+    pending_commands: dict,
+    lock: threading.Lock,
+    stop_event: threading.Event,
+):
+    from kafka import KafkaConsumer
+
+    consumer = KafkaConsumer(
+        control_topic,
+        bootstrap_servers=bootstrap_servers.split(","),
+        value_deserializer=lambda m: json.loads(m.decode("utf-8")),
+        auto_offset_reset="latest",
+        enable_auto_commit=True,
+        group_id=f"producer-control-{run_id}",
+        consumer_timeout_ms=1000,
+    )
+
+    try:
+        while not stop_event.is_set():
+            for msg in consumer:
+                if stop_event.is_set():
+                    break
+                payload = msg.value
+                if payload.get("run_id") != run_id:
+                    continue
+                tls_id = payload.get("tls_id")
+                program_id = str(payload.get("program_id"))
+                if tls_id and program_id in {"0", "1", "2"}:
+                    with lock:
+                        pending_commands[tls_id] = payload
+    finally:
+        consumer.close()
+
+
+def main():
+    parser = argparse.ArgumentParser(description="SUMO TraCI -> Kafka Producer")
+    parser.add_argument("--run-id", default=f"run_{int(time.time())}")
+    parser.add_argument("--scenario", default="normal", choices=["normal", "demand_surge", "lane_closure"])
+    parser.add_argument("--mode", default="fixed", choices=["fixed", "adaptive"])
+    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--gui", action="store_true", help="SUMO GUI ile calistir")
+    parser.add_argument("--dry-run", action="store_true", help="Kafka yerine konsola JSON bas")
+    parser.add_argument("--bootstrap-servers", default=os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"))
+    parser.add_argument("--raw-topic", default=os.getenv("KAFKA_TOPIC_RAW", "traffic.raw"))
+    parser.add_argument("--control-topic", default=os.getenv("KAFKA_TOPIC_CONTROL", "traffic.control"))
+    parser.add_argument("--approaches", default="config/approaches.yaml")
+    parser.add_argument("--step-delay", type=float, default=0.0, help="Her sim adimi sonrasi bekleme (sn)")
+    args = parser.parse_args()
+
+    intersections = load_approaches(args.approaches)
+    sumocfg_path = Path("sumo/scenarios") / f"{args.scenario}.sumocfg"
+    if not sumocfg_path.exists():
+        sys.exit(f"HATA: Senaryo dosyasi bulunamadi: {sumocfg_path}")
+
+    kafka_producer = None
+    if not args.dry_run:
+        from kafka import KafkaProducer
+        kafka_producer = KafkaProducer(
+            bootstrap_servers=args.bootstrap_servers.split(","),
+            key_serializer=lambda k: k.encode("utf-8"),
+            value_serializer=lambda v: json.dumps(v, ensure_ascii=False).encode("utf-8"),
+        )
+
+    pending_commands: dict = {}
+    cmd_lock = threading.Lock()
+    stop_event = threading.Event()
+    listener_thread = None
+
+    if args.mode == "adaptive" and not args.dry_run:
+        listener_thread = threading.Thread(
+            target=start_control_listener,
+            args=(args.bootstrap_servers, args.control_topic, args.run_id, pending_commands, cmd_lock, stop_event),
+            daemon=True,
+        )
+        listener_thread.start()
+
+    sumo_binary = "sumo-gui" if args.gui else "sumo"
+    sumo_cmd = [sumo_binary, "-c", str(sumocfg_path), "--seed", str(args.seed), "--no-step-log"]
+
+    traci.start(sumo_cmd)
+    run_start_ms = now_ms()
+    last_sample_sim_time = -2.0
+    sent_count = 0
+
+    try:
+        while traci.simulation.getMinExpectedNumber() > 0:
+            traci.simulationStep()
+            sim_time = traci.simulation.getTime()
+
+            # Adaptive modda bekleyen kontrol komutlarini uygula
+            if args.mode == "adaptive":
+                with cmd_lock:
+                    to_apply = list(pending_commands.items())
+                    pending_commands.clear()
+
+                for tls_id, cmd in to_apply:
+                    prog_id = str(cmd["program_id"])
+                    traci.trafficlight.setProgram(tls_id, prog_id)
+                    applied_at_ms = now_ms()
+                    print(
+                        f"[CONTROL APPLIED] run={args.run_id} tls={tls_id} "
+                        f"program={prog_id} sim_time={sim_time:.1f} "
+                        f"latency_ms={applied_at_ms - cmd.get('source_produced_at_ms', applied_at_ms)}"
+                    )
+
+            # Her 2 simulasyon saniyesinde bir olcum uret
+            if sim_time - last_sample_sim_time >= 2.0 - 1e-6:
+                last_sample_sim_time = sim_time
+                for tls_id, lanes_cfg in intersections.items():
+                    msg = collect_intersection_metrics(
+                        tls_id=tls_id,
+                        lanes_cfg=lanes_cfg,
+                        run_id=args.run_id,
+                        scenario=args.scenario,
+                        mode=args.mode,
+                        seed=args.seed,
+                        sim_time=sim_time,
+                        run_start_ms=run_start_ms,
+                    )
+                    key = f"{args.run_id}:{tls_id}"
+                    if args.dry_run:
+                        if sent_count < 6:
+                            print(f"[{key}] {json.dumps(msg)}")
+                    else:
+                        kafka_producer.send(args.raw_topic, key=key, value=msg)
+                    sent_count += 1
+
+            if args.step_delay > 0:
+                time.sleep(args.step_delay)
+
+        if kafka_producer:
+            kafka_producer.flush()
+        print(f"Tamamlandi! Toplam {sent_count} mesaj uretildi (run_id={args.run_id}).")
+    finally:
+        stop_event.set()
+        traci.close()
+        if kafka_producer:
+            kafka_producer.close()
+
+
+if __name__ == "__main__":
+    main()

@@ -1,4 +1,5 @@
-﻿import argparse
+﻿import xml.etree.ElementTree as ET
+import argparse
 import json
 import os
 import sys
@@ -146,19 +147,22 @@ def start_control_listener(
 
     try:
         while not stop_event.is_set():
-            for msg in consumer:
-                if stop_event.is_set():
-                    break
-                payload = msg.value
-                if payload.get("run_id") != run_id:
-                    continue
-                tls_id = payload.get("tls_id")
-                program_id = str(payload.get("program_id"))
-                if tls_id and program_id in {"0", "1", "2"}:
-                    with lock:
-                        pending_commands[tls_id] = payload
+            records = consumer.poll(timeout_ms=250)
+            for _tp, messages in records.items():
+                for msg in messages:
+                    payload = msg.value
+                    if payload.get("run_id") != run_id:
+                        continue
+                    tls_id = payload.get("tls_id")
+                    program_id = str(payload.get("program_id"))
+                    if tls_id and program_id in {"0", "1", "2"}:
+                        with lock:
+                            pending_commands[tls_id] = payload
     finally:
-        consumer.close()
+        try:
+            consumer.close()
+        except Exception:
+            pass
 
 
 def main():
@@ -181,8 +185,8 @@ def main():
     args = parser.parse_args()
 
     ch_db = os.getenv("CLICKHOUSE_DB", "traffic")
-    ch_user = os.getenv("CLICKHOUSE_USER", "default")
-    ch_password = os.getenv("CLICKHOUSE_PASSWORD", "")
+    ch_user = os.getenv("CLICKHOUSE_USER", "traffic_user")
+    ch_password = os.getenv("CLICKHOUSE_PASSWORD", "traffic_pass")
 
     intersections = load_approaches(args.approaches)
     sumocfg_path = Path("sumo/scenarios") / f"{args.scenario}.sumocfg"
@@ -214,13 +218,17 @@ def main():
     sumo_binary = "sumo-gui" if args.gui else "sumo"
     sumo_cmd = [sumo_binary, "-c", str(sumocfg_path), "--seed", str(args.seed), "--no-step-log"]
 
+    cfg_tree = ET.parse(sumocfg_path)
+    end_elem = cfg_tree.getroot().find("./time/end")
+    sim_end_time = float(end_elem.attrib["value"]) if end_elem is not None else 2400.0
+
     traci.start(sumo_cmd)
     run_start_ms = now_ms()
     last_sample_sim_time = -2.0
     sent_count = 0
 
     try:
-        while traci.simulation.getMinExpectedNumber() > 0:
+        while traci.simulation.getTime() < sim_end_time:
             traci.simulationStep()
             sim_time = traci.simulation.getTime()
 
@@ -291,6 +299,8 @@ def main():
         print(f"Tamamlandi! Toplam {sent_count} mesaj uretildi (run_id={args.run_id}, bootstrap={args.bootstrap_servers}).")
     finally:
         stop_event.set()
+        if listener_thread is not None:
+            listener_thread.join(timeout=3.0)
         traci.close()
         if kafka_producer:
             kafka_producer.close()
@@ -298,3 +308,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+

@@ -28,6 +28,8 @@ CREATE TABLE IF NOT EXISTS traffic.metrics
 (
     run_id               String,
     tls_id               LowCardinality(String),
+    scenario             LowCardinality(String),
+    mode                 LowCardinality(String),
     window_start_ms      Int64,
     window_end_ms        Int64,
     sim_time_end         Float64,

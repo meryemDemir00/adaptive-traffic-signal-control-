@@ -18,7 +18,7 @@ STARTING = os.environ.get("SPARK_STARTING_OFFSETS", "latest")
 CHECKPOINT = os.environ.get("SPARK_CHECKPOINT_DIR", "/tmp/checkpoints/metrics")
 
 COLS = [
-    "run_id", "tls_id", "window_start_ms", "window_end_ms", "sim_time_end",
+    "run_id", "tls_id", "scenario", "mode", "window_start_ms", "window_end_ms", "sim_time_end",
     "last_produced_at_ms", "spark_out_at_ms", "avg_queue", "avg_queue_main",
     "avg_queue_side", "avg_wait", "avg_speed", "avg_occupancy",
 ]
@@ -68,6 +68,8 @@ agg = (
     parsed.withWatermark("event_time", "%d seconds" % WATERMARK)
     .groupBy(F.window("event_time", "%d seconds" % WINDOW), "run_id", "tls_id")
     .agg(
+        F.first("scenario").alias("scenario"),
+        F.first("mode").alias("mode"),
         F.max("sim_time").alias("sim_time_end"),
         F.max("produced_at_ms").alias("last_produced_at_ms"),
         F.avg("total_halting").alias("avg_queue"),
@@ -82,6 +84,8 @@ agg = (
 metrics = agg.select(
     "run_id",
     "tls_id",
+    "scenario",
+    "mode",
     (F.col("window.start").cast("double") * 1000).cast("long").alias("window_start_ms"),
     (F.col("window.end").cast("double") * 1000).cast("long").alias("window_end_ms"),
     "sim_time_end",

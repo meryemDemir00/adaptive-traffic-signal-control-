@@ -1,0 +1,11 @@
+﻿<configuration>
+    <input>
+        <net-file value="../network/izmit.net.xml"/>
+        <route-files value="lane_closure.rou.xml"/>
+        <additional-files value="../network/tls_programs.add.xml,lane_closure.add.xml"/>
+    </input>
+    <time>
+        <begin value="0"/>
+        <end value="900"/>
+    </time>
+</configuration>

@@ -1,0 +1,28 @@
+﻿intersections:
+  B0:
+    main:
+      - A0B0_0
+      - A0B0_1
+      - C0B0_0
+      - C0B0_1
+    side:
+      - B1B0_0
+      - B1B0_1
+  C0:
+    main:
+      - B0C0_0
+      - B0C0_1
+      - D0C0_0
+      - D0C0_1
+    side:
+      - C1C0_0
+      - C1C0_1
+  C1:
+    main:
+      - B1C1_0
+      - B1C1_1
+      - D1C1_0
+      - D1C1_1
+    side:
+      - C0C1_0
+      - C0C1_1

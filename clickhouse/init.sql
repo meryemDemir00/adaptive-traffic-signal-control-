@@ -60,3 +60,5 @@ CREATE TABLE IF NOT EXISTS traffic.control_events
 )
 ENGINE = MergeTree
 ORDER BY (run_id, tls_id, decided_at_ms);
+CREATE USER IF NOT EXISTS traffic_user IDENTIFIED WITH plaintext_password BY 'traffic_pass';
+GRANT ALL ON traffic.* TO traffic_user;

@@ -19,7 +19,30 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_HEAP_OPTS: "-Xms512m -Xmx512m"
     mem_limit: 1g
-
+    healthcheck:
+      test: ["CMD-SHELL", "KAFKA_HEAP_OPTS='-Xmx128m' /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 15s
+      retries: 10
+      start_period: 20s
+  kafka-init:
+    image: apache/kafka:3.9.0
+    container_name: kafka-init
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        for t in $$KAFKA_TOPIC_RAW $$KAFKA_TOPIC_METRICS $$KAFKA_TOPIC_CONTROL; do
+          /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic $$t --partitions 1 --replication-factor 1
+        done
+    environment:
+      KAFKA_HEAP_OPTS: "-Xmx128m"
+      KAFKA_TOPIC_RAW: ${KAFKA_TOPIC_RAW}
+      KAFKA_TOPIC_METRICS: ${KAFKA_TOPIC_METRICS}
+      KAFKA_TOPIC_CONTROL: ${KAFKA_TOPIC_CONTROL}
+    restart: "no"
   clickhouse:
     image: clickhouse/clickhouse-server:24.8
     container_name: clickhouse
@@ -29,6 +52,7 @@ services:
       CLICKHOUSE_DB: ${CLICKHOUSE_DB}
     volumes:
       - clickhouse_data:/var/lib/clickhouse
+      - ./clickhouse/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     ulimits:
       nofile:
         soft: 262144
@@ -36,10 +60,12 @@ services:
     mem_limit: 1g
 
   grafana:
-    image: grafana/grafana:11.3.0
+    image: grafana/grafana-oss:11.3.0
     container_name: grafana
     ports:
       - "3000:3000"
+    environment:
+      GF_INSTALL_PLUGINS: grafana-clickhouse-datasource
     volumes:
       - grafana_data:/var/lib/grafana
     mem_limit: 384m

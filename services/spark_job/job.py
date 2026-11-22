@@ -20,7 +20,7 @@ CHECKPOINT = os.environ.get("SPARK_CHECKPOINT_DIR", "/tmp/checkpoints/metrics")
 COLS = [
     "run_id", "tls_id", "scenario", "mode", "window_start_ms", "window_end_ms", "sim_time_end",
     "last_produced_at_ms", "spark_out_at_ms", "avg_queue", "avg_queue_main",
-    "avg_queue_side", "avg_wait", "avg_speed", "avg_occupancy, "n_records",
+    "avg_queue_side", "avg_wait", "avg_speed", "avg_occupancy", "n_records",
 ]
 
 RAW_SCHEMA = T.StructType([

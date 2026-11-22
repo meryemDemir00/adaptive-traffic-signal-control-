@@ -1,6 +1,6 @@
-# Esikler: sabit zamanli, normal senaryo baseline kosusundan (avg_queue) hesaplandi.
-# low/medium siniri = P50, high girisi = P85, high cikisi = 0.8 * P85.
-# Baseline 3 seed ile tekrarlaninca bu degerler guncellenecek.
+## Esikler: sabit zamanli, normal senaryo baseline kosularindan (3 seed: 1, 2, 3) hesaplandi.
+# Metrik: avg_queue. low/medium siniri = P50, high girisi = P85, high cikisi = 0.8 * P85.
+# P50 = 0: pencerelerin yarisindan fazlasinda kuyruk yok; medium sinirini controller kullanmaz.
 metric: avg_queue
 exit_ratio: 0.8
 dominance_ratio: 1.5   # ana/yan kuyruk orani bu degeri asarsa oncelikli program secilir
@@ -10,11 +10,11 @@ programs:
   side_priority: "2"
 intersections:
   B0:
-    medium: 5.1
-    high: 10.6
+    medium: 0.0
+    high: 8.6
   C0:
-    medium: 6.1
-    high: 15.8
+    medium: 0.0
+    high: 12.06
   C1:
-    medium: 3.3
-    high: 10.6
+    medium: 0.0
+    high: 8.0

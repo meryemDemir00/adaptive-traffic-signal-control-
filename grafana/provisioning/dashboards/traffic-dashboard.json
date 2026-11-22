@@ -8,7 +8,7 @@
   "timezone": "utc",
   "editable": true,
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "refresh": "5s",
   "time": {
     "from": "1970-01-01T00:00:00.000Z",
@@ -331,6 +331,76 @@
           "format": 0,
           "queryType": "table",
           "rawSql": "SELECT toUInt32(applied_sim_time) AS Sim_zamani_s, tls_id AS Kavsak, program_id AS Plan, reason AS Neden, applied_at_ms - source_produced_at_ms AS Gecikme_ms FROM traffic.control_events WHERE run_id='${run_id}' ORDER BY applied_sim_time, tls_id",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "table",
+      "title": "Sistem metrikleri (secili kosu)",
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 24,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse"
+          },
+          "editorType": "sql",
+          "format": 0,
+          "queryType": "table",
+          "rawSql": "SELECT mode AS Mod, scenario AS Senaryo, records_total AS Kayit, windows AS Pencere, wall_seconds AS Sure_s, records_per_sec AS Kayit_sn, completeness_pct AS Surerlilik_yuzde, max_gap_ms AS Maks_bosluk_ms, decisions AS Karar, e2e_avg_ms AS Gecikme_ort_ms, e2e_max_ms AS Gecikme_maks_ms FROM traffic.run_system_metrics WHERE run_id='${run_id}'",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "table",
+      "title": "Tum kosular (karsilastirma)",
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 28,
+        "w": 24,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse"
+          },
+          "editorType": "sql",
+          "format": 0,
+          "queryType": "table",
+          "rawSql": "SELECT run_id AS Kosu, mode AS Mod, scenario AS Senaryo, records_total AS Kayit, windows AS Pencere, wall_seconds AS Sure_s, records_per_sec AS Kayit_sn, completeness_pct AS Surerlilik_yuzde, max_gap_ms AS Maks_bosluk_ms, decisions AS Karar, e2e_avg_ms AS Gecikme_ort_ms, e2e_max_ms AS Gecikme_maks_ms FROM traffic.run_system_metrics ORDER BY run_id",
           "refId": "A"
         }
       ]

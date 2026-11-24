@@ -127,7 +127,9 @@ services:
 
 
   producer:
-    build: ./services/producer
+    build:
+      context: .
+      dockerfile: services/producer/Dockerfile
     profiles: ["sim"]
     depends_on:
       kafka-init:
@@ -135,7 +137,7 @@ services:
       clickhouse:
         condition: service_started
     environment:
-      RUNNING_IN_DOCKER: "1"
+      IN_DOCKER: "true"
       KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
       KAFKA_TOPIC_RAW: ${KAFKA_TOPIC_RAW}
       KAFKA_TOPIC_CONTROL: ${KAFKA_TOPIC_CONTROL}
@@ -144,12 +146,11 @@ services:
       CLICKHOUSE_DB: ${CLICKHOUSE_DB}
       CLICKHOUSE_USER: ${CLICKHOUSE_USER}
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
-      SUMO_CONFIG: ${SUMO_CONFIG}
     volumes:
+      - ./experiments/results:/app/experiments/results
       - ./sumo:/app/sumo:ro
       - ./config:/app/config:ro
-      - ./experiments/results:/app/results
-    mem_limit: 768m
+    mem_limit: 1g
 
 volumes:
   clickhouse_data:

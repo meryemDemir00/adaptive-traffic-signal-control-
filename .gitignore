@@ -11,6 +11,7 @@ venv/
 *.log
 sumo/output/
 experiments/raw/
+experiments/results/*.xml
 
 # Docker veri klasörleri
 data/
@@ -19,3 +20,4 @@ data/
 .vscode/
 .idea/
 .DS_Store
+

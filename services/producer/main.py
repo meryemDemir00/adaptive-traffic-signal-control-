@@ -41,12 +41,10 @@ def is_running_in_docker() -> bool:
 
 def resolve_bootstrap_servers(raw_value: str) -> str:
     val = (raw_value or "").strip()
-    if is_running_in_docker():
-        return val or "kafka:9092"
-    # Windows/host uzerinden yerel calistirmada kafka:9092 yerine localhost:29092 kullanilir
-    if not val or val == "kafka:9092":
-        return "localhost:29092"
-    return val
+    # KAFKA_BOOTSTRAP_SERVERS acikca verildiyse tahmine gerek kalmadan dogrudan kullan
+    if val:
+        return val
+    return "kafka:9092" if is_running_in_docker() else "localhost:29092"
 
 
 def resolve_clickhouse_url() -> str:

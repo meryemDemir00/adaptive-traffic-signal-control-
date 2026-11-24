@@ -1,43 +1,39 @@
-﻿<additional>
-    <!-- B0 Kavsagi Ek Programlari (0 varsayilan olarak izmit.net.xml icinde mevcut) -->
-    <tlLogic id="B0" type="static" programID="1" offset="0">
-        <phase duration="45" state="rrrrGGGgGGgg"/>
-        <phase duration="3"  state="rrrrGyyyyyyy"/>
-        <phase duration="15" state="GGGgGrrrrrrr"/>
-        <phase duration="3"  state="yyyyGrrrrrrr"/>
+<?xml version="1.0" encoding="UTF-8"?>
+<additional>
+    <tlLogic id="cluster_1295374282_1295466141_9650452537" type="static" programID="1" offset="0">
+        <phase duration="24" state="GGGrrrrrr"/>
+        <phase duration="6" state="yyGrrrrrr"/>
+        <phase duration="54" state="rrGGGGGGG"/>
+        <phase duration="6" state="rrGyyyyyy"/>
     </tlLogic>
-    <tlLogic id="B0" type="static" programID="2" offset="0">
-        <phase duration="15" state="rrrrGGGgGGgg"/>
-        <phase duration="3"  state="rrrrGyyyyyyy"/>
-        <phase duration="45" state="GGGgGrrrrrrr"/>
-        <phase duration="3"  state="yyyyGrrrrrrr"/>
+    <tlLogic id="cluster_1295374282_1295466141_9650452537" type="static" programID="2" offset="0">
+        <phase duration="54" state="GGGrrrrrr"/>
+        <phase duration="6" state="yyGrrrrrr"/>
+        <phase duration="24" state="rrGGGGGGG"/>
+        <phase duration="6" state="rrGyyyyyy"/>
     </tlLogic>
-
-    <!-- C0 Kavsagi Ek Programlari -->
-    <tlLogic id="C0" type="static" programID="1" offset="5">
-        <phase duration="45" state="rrrrGGGgGGgg"/>
-        <phase duration="3"  state="rrrrGyyyyyyy"/>
-        <phase duration="15" state="GGGgGrrrrrrr"/>
-        <phase duration="3"  state="yyyyGrrrrrrr"/>
+    <tlLogic id="cluster_2361311906_2361311907" type="static" programID="1" offset="0">
+        <phase duration="54" state="GGgGGrr"/>
+        <phase duration="6" state="yyyyyrr"/>
+        <phase duration="24" state="rrrrrGG"/>
+        <phase duration="6" state="rrrrryy"/>
     </tlLogic>
-    <tlLogic id="C0" type="static" programID="2" offset="5">
-        <phase duration="15" state="rrrrGGGgGGgg"/>
-        <phase duration="3"  state="rrrrGyyyyyyy"/>
-        <phase duration="45" state="GGGgGrrrrrrr"/>
-        <phase duration="3"  state="yyyyGrrrrrrr"/>
+    <tlLogic id="cluster_2361311906_2361311907" type="static" programID="2" offset="0">
+        <phase duration="24" state="GGgGGrr"/>
+        <phase duration="6" state="yyyyyrr"/>
+        <phase duration="54" state="rrrrrGG"/>
+        <phase duration="6" state="rrrrryy"/>
     </tlLogic>
-
-    <!-- C1 Kavsagi Ek Programlari -->
-    <tlLogic id="C1" type="static" programID="1" offset="10">
-        <phase duration="45" state="GGggrrrrGGGg"/>
-        <phase duration="3"  state="yyyyrrrrGyyy"/>
-        <phase duration="15" state="rrrrGGGgGrrr"/>
-        <phase duration="3"  state="rrrryyyyGrrr"/>
+    <tlLogic id="cluster_4883607431_8149761648" type="static" programID="1" offset="0">
+        <phase duration="54" state="rrrGGgGG"/>
+        <phase duration="6" state="rrryyyyy"/>
+        <phase duration="24" state="GGGrrrrr"/>
+        <phase duration="6" state="yyyrrrrr"/>
     </tlLogic>
-    <tlLogic id="C1" type="static" programID="2" offset="10">
-        <phase duration="15" state="GGggrrrrGGGg"/>
-        <phase duration="3"  state="yyyyrrrrGyyy"/>
-        <phase duration="45" state="rrrrGGGgGrrr"/>
-        <phase duration="3"  state="rrrryyyyGrrr"/>
+    <tlLogic id="cluster_4883607431_8149761648" type="static" programID="2" offset="0">
+        <phase duration="24" state="rrrGGgGG"/>
+        <phase duration="6" state="rrryyyyy"/>
+        <phase duration="54" state="GGGrrrrr"/>
+        <phase duration="6" state="yyyrrrrr"/>
     </tlLogic>
 </additional>

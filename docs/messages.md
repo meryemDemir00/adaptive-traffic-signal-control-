@@ -55,7 +55,7 @@ Sıklık: her 2 simülasyon saniyesinde, kavşak başına bir mesaj.
 Örnek:
 
 ```json
-{"run\_id":"r001","scenario":"normal","mode":"fixed","seed":1,"sim\_time":120.0,"event\_time\_ms":1767000120000,"produced\_at\_ms":1767000005123,"tls\_id":"J1","total\_halting":7,"queue\_main":5,"queue\_side":2,"avg\_waiting\_time":4.8,"avg\_speed":3.1,"avg\_occupancy":12.4,"vehicle\_count":18}
+{"run\_id":"r001","scenario":"normal","mode":"fixed","seed":1,"sim\_time":120.0,"event\_time\_ms":1767000120000,"produced\_at\_ms":1767000005123,"tls\_id":"cluster_1295374282_1295466141_9650452537","total\_halting":7,"queue\_main":5,"queue\_side":2,"avg\_waiting\_time":4.8,"avg\_speed":3.1,"avg\_occupancy":12.4,"vehicle\_count":18}
 ```
 
 ## 2\. `traffic.metrics`

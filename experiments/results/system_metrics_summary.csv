@@ -1,0 +1,10 @@
+﻿"run_id","scenario","mode","records_total","windows","wall_seconds","records_per_sec","completeness_pct","applied_switches","e2e_avg_ms","e2e_max_ms"
+"exp_demand_surge_adaptive_v2_s1","demand_surge","adaptive",270,54,178.36,1.5,100,4,4038.5,4319
+"exp_demand_surge_adaptive_v2_s2","demand_surge","adaptive",282,57,180.44,1.6,100,5,4066.2,4288
+"exp_demand_surge_adaptive_v2_s3","demand_surge","adaptive",276,57,179.74,1.5,100,5,4162.6,4933
+"exp_lane_closure_adaptive_v2_s1","lane_closure","adaptive",270,54,378.32,0.7,100,2,4363,5013
+"exp_lane_closure_adaptive_v2_s2","lane_closure","adaptive",600,120,192.98,3.1,100,8,3960.5,4673
+"exp_lane_closure_adaptive_v2_s3","lane_closure","adaptive",270,54,15.22,17.7,100,3,4137.3,4353
+"exp_normal_adaptive_v2_s1","normal","adaptive",3600,720,323.01,11.1,100,4,3932.2,4749
+"exp_normal_adaptive_v2_s2","normal","adaptive",276,57,176.6,1.6,100,0,0,0
+"exp_normal_adaptive_v2_s3","normal","adaptive",264,54,180.8,1.5,100,2,4175,4371

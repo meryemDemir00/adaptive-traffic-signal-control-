@@ -1,3 +1,10 @@
+# Kalibrasyon Yontemi:
+# - Metrik: Spark 10 saniyelik pencere ortalama kuyruk uzunlugu (avg_queue)
+# - Esik Kriteri: Birlestirilmis 90. yuzdelik dilim (P90) (kavsak basina ~718 pencere)
+# - Kalibrasyon Verisi: 'normal' senaryo, sabit zamanli kontrol (program 0), bagimsiz seedler (101, 102, 103)
+# - Karar Kararliligi: Ardisik 3 pencere (30 sn) esik asimi ve minimum 30 sn faz degisim araligi
+# - Histerezis Cikis Orani (exit_ratio): 0.8 (esigin %80'inin altina inildiginde normale donus)
+
 exit_ratio: 0.8
 dominance_ratio: 1.5
 
@@ -8,8 +15,8 @@ programs:
 
 intersections:
   cluster_1295374282_1295466141_9650452537:
-    high: 9.0
+    high: 7.6   # Bati Kavsagi P90
   cluster_2361311906_2361311907:
-    high: 14.0
+    high: 11.4  # Merkez Kavsagi P90
   cluster_4883607431_8149761648:
-    high: 10.0
+    high: 8.0   # Dogu Kavsagi P90

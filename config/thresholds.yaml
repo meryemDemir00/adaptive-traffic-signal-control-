@@ -1,20 +1,15 @@
-## Esikler: sabit zamanli, normal senaryo baseline kosularindan (3 seed: 1, 2, 3) hesaplandi.
-# Metrik: avg_queue. low/medium siniri = P50, high girisi = P85, high cikisi = 0.8 * P85.
-# P50 = 0: pencerelerin yarisindan fazlasinda kuyruk yok; medium sinirini controller kullanmaz.
-metric: avg_queue
 exit_ratio: 0.8
-dominance_ratio: 1.5   # ana/yan kuyruk orani bu degeri asarsa oncelikli program secilir
+dominance_ratio: 1.5
+
 programs:
   default: "0"
   main_priority: "1"
   side_priority: "2"
+
 intersections:
-  B0:
-    medium: 0.0
-    high: 8.6
-  C0:
-    medium: 0.0
-    high: 12.06
-  C1:
-    medium: 0.0
-    high: 8.0
+  cluster_1295374282_1295466141_9650452537:
+    high: 9.0
+  cluster_2361311906_2361311907:
+    high: 14.0
+  cluster_4883607431_8149761648:
+    high: 10.0

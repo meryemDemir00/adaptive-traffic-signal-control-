@@ -17,15 +17,18 @@
     <!-- Dogu yan kol -> Bati ana koridor -->
     <route id="r_side_east_west" edges="227656439#1 227656439#5 114331720#0 114331720#3 200976619#0 200976619#1"/>
 
+    <!-- t = 0 baslangic akislari -->
     <flow id="f_we_base1" type="car" route="r_west_east" begin="0" end="600" vehsPerHour="450" departLane="best" departSpeed="max"/>
-    <flow id="f_we_surge" type="car" route="r_west_east" begin="600" end="1500" vehsPerHour="1350" departLane="best" departSpeed="max"/>
-    <flow id="f_we_base2" type="car" route="r_west_east" begin="1500" end="2400" vehsPerHour="450" departLane="best" departSpeed="max"/>
-
     <flow id="f_ew_base1" type="car" route="r_east_west" begin="0" end="600" vehsPerHour="400" departLane="best" departSpeed="max"/>
-    <flow id="f_ew_surge" type="car" route="r_east_west" begin="600" end="1500" vehsPerHour="1100" departLane="best" departSpeed="max"/>
-    <flow id="f_ew_base2" type="car" route="r_east_west" begin="1500" end="2400" vehsPerHour="400" departLane="best" departSpeed="max"/>
-
     <flow id="f_ne_surge" type="car" route="r_north_east" begin="0" end="2400" vehsPerHour="260" departLane="best" departSpeed="max"/>
     <flow id="f_nw_surge" type="car" route="r_north_west" begin="0" end="2400" vehsPerHour="220" departLane="best" departSpeed="max"/>
     <flow id="f_sew_surge" type="car" route="r_side_east_west" begin="0" end="2400" vehsPerHour="240" departLane="best" departSpeed="max"/>
+
+    <!-- t = 600 pik talep artisi -->
+    <flow id="f_we_surge" type="car" route="r_west_east" begin="600" end="1500" vehsPerHour="1350" departLane="best" departSpeed="max"/>
+    <flow id="f_ew_surge" type="car" route="r_east_west" begin="600" end="1500" vehsPerHour="1100" departLane="best" departSpeed="max"/>
+
+    <!-- t = 1500 normale donus -->
+    <flow id="f_we_base2" type="car" route="r_west_east" begin="1500" end="2400" vehsPerHour="450" departLane="best" departSpeed="max"/>
+    <flow id="f_ew_base2" type="car" route="r_east_west" begin="1500" end="2400" vehsPerHour="400" departLane="best" departSpeed="max"/>
 </routes>

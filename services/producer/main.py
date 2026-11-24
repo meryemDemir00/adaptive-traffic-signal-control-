@@ -1,4 +1,4 @@
-﻿import xml.etree.ElementTree as ET
+import xml.etree.ElementTree as ET
 import argparse
 import json
 import os
@@ -12,8 +12,8 @@ from pathlib import Path
 import yaml
 from dotenv import load_dotenv
 
-# .env dosyasini yukle
-load_dotenv()
+# .env dosyasini yukle (ortam degiskenleri zaten tanimliysa ezmez)
+load_dotenv(override=False)
 
 # SUMO_HOME/tools yolunu Python path'e ekle
 if "SUMO_HOME" in os.environ:
@@ -30,16 +30,28 @@ def now_ms() -> int:
     return int(time.time() * 1000)
 
 
-def resolve_host_bootstrap_servers(raw_value: str) -> str:
-    # Docker ici kafka:9092 adresi Windows host'tan localhost:29092 olarak erisilir
-    if not raw_value or raw_value.strip() == "kafka:9092":
+def is_running_in_docker() -> bool:
+    flag = os.getenv("IN_DOCKER", "").strip().lower()
+    if flag in {"1", "true", "yes"}:
+        return True
+    if flag in {"0", "false", "no"}:
+        return False
+    return os.path.exists("/.dockerenv")
+
+
+def resolve_bootstrap_servers(raw_value: str) -> str:
+    val = (raw_value or "").strip()
+    if is_running_in_docker():
+        return val or "kafka:9092"
+    # Windows/host uzerinden yerel calistirmada kafka:9092 yerine localhost:29092 kullanilir
+    if not val or val == "kafka:9092":
         return "localhost:29092"
-    return raw_value.strip()
+    return val
 
 
 def resolve_clickhouse_url() -> str:
-    host = os.getenv("CLICKHOUSE_HOST", "localhost").strip()
-    if host == "clickhouse":
+    host = os.getenv("CLICKHOUSE_HOST", "clickhouse" if is_running_in_docker() else "localhost").strip()
+    if not is_running_in_docker() and host == "clickhouse":
         host = "localhost"
     port = os.getenv("CLICKHOUSE_PORT", "8123").strip()
     return f"http://{host}:{port}"
@@ -166,7 +178,7 @@ def start_control_listener(
 
 
 def main():
-    default_bootstrap = resolve_host_bootstrap_servers(os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:29092"))
+    default_bootstrap = resolve_bootstrap_servers(os.getenv("KAFKA_BOOTSTRAP_SERVERS", ""))
     default_ch_url = resolve_clickhouse_url()
 
     parser = argparse.ArgumentParser(description="SUMO TraCI -> Kafka Producer")
@@ -181,17 +193,23 @@ def main():
     parser.add_argument("--control-topic", default=os.getenv("KAFKA_TOPIC_CONTROL", "traffic.control"))
     parser.add_argument("--clickhouse-url", default=default_ch_url)
     parser.add_argument("--approaches", default="config/approaches.yaml")
+    parser.add_argument("--output-dir", default="experiments/results", help="SUMO tripinfo/summary cikti klasoru")
     parser.add_argument("--step-delay", type=float, default=0.0, help="Her sim adimi sonrasi bekleme (sn)")
     args = parser.parse_args()
 
-    ch_db = os.getenv("CLICKHOUSE_DB", "traffic")
-    ch_user = os.getenv("CLICKHOUSE_USER", "traffic_user")
-    ch_password = os.getenv("CLICKHOUSE_PASSWORD", "traffic_pass")
+    ch_db = os.getenv("CLICKHOUSE_DB", "traffic").strip()
+    ch_user = os.getenv("CLICKHOUSE_USER", "").strip()
+    ch_password = os.getenv("CLICKHOUSE_PASSWORD", "").strip()
 
     intersections = load_approaches(args.approaches)
     sumocfg_path = Path("sumo/scenarios") / f"{args.scenario}.sumocfg"
     if not sumocfg_path.exists():
         sys.exit(f"HATA: Senaryo dosyasi bulunamadi: {sumocfg_path}")
+
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    tripinfo_path = output_dir / f"{args.run_id}_tripinfo.xml"
+    summary_path = output_dir / f"{args.run_id}_summary.xml"
 
     kafka_producer = None
     if not args.dry_run:
@@ -216,7 +234,14 @@ def main():
         listener_thread.start()
 
     sumo_binary = "sumo-gui" if args.gui else "sumo"
-    sumo_cmd = [sumo_binary, "-c", str(sumocfg_path), "--seed", str(args.seed), "--no-step-log"]
+    sumo_cmd = [
+        sumo_binary,
+        "-c", str(sumocfg_path),
+        "--seed", str(args.seed),
+        "--no-step-log",
+        "--tripinfo-output", str(tripinfo_path),
+        "--summary-output", str(summary_path),
+    ]
 
     cfg_tree = ET.parse(sumocfg_path)
     end_elem = cfg_tree.getroot().find("./time/end")
@@ -296,7 +321,10 @@ def main():
 
         if kafka_producer:
             kafka_producer.flush()
-        print(f"Tamamlandi! Toplam {sent_count} mesaj uretildi (run_id={args.run_id}, bootstrap={args.bootstrap_servers}).")
+        print(
+            f"Tamamlandi! Toplam {sent_count} mesaj uretildi "
+            f"(run_id={args.run_id}, bootstrap={args.bootstrap_servers}, tripinfo={tripinfo_path})."
+        )
     finally:
         stop_event.set()
         if listener_thread is not None:
@@ -308,6 +336,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-

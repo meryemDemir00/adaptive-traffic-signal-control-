@@ -1,0 +1,6 @@
+eclipse-sumo==1.28.0
+traci==1.28.0
+sumolib==1.28.0
+kafka-python==2.0.2
+PyYAML==6.0.2
+python-dotenv==1.0.1

@@ -1,4 +1,4 @@
-import xml.etree.ElementTree as ET
+﻿import xml.etree.ElementTree as ET
 import argparse
 import json
 import os
@@ -142,20 +142,27 @@ def start_control_listener(
     pending_commands: dict,
     lock: threading.Lock,
     stop_event: threading.Event,
+    ready_event: threading.Event,
 ):
-    from kafka import KafkaConsumer
+    """Kontrol topic'ini dinler. Bolumleri elle atar ve sona sarar (grup katilimi/rebalance
+    beklenmez); ready_event ancak konum kesinlestikten sonra set edilir."""
+    from kafka import KafkaConsumer, TopicPartition
 
-    consumer = KafkaConsumer(
-        control_topic,
-        bootstrap_servers=bootstrap_servers.split(","),
-        value_deserializer=lambda m: json.loads(m.decode("utf-8")),
-        auto_offset_reset="latest",
-        enable_auto_commit=True,
-        group_id=f"producer-control-{run_id}",
-        consumer_timeout_ms=1000,
-    )
-
+    consumer = None
     try:
+        consumer = KafkaConsumer(
+            bootstrap_servers=bootstrap_servers.split(","),
+            value_deserializer=lambda m: json.loads(m.decode("utf-8")),
+            enable_auto_commit=False,
+        )
+        partitions = consumer.partitions_for_topic(control_topic) or {0}
+        tps = [TopicPartition(control_topic, p) for p in sorted(partitions)]
+        consumer.assign(tps)
+        consumer.seek_to_end(*tps)
+        for tp in tps:
+            consumer.position(tp)  # offset'in cozuldugunu garanti eder
+        ready_event.set()
+
         while not stop_event.is_set():
             records = consumer.poll(timeout_ms=250)
             for _tp, messages in records.items():
@@ -168,11 +175,14 @@ def start_control_listener(
                     if tls_id and program_id in {"0", "1", "2"}:
                         with lock:
                             pending_commands[tls_id] = payload
+    except Exception as exc:
+        print(f"[HATA] kontrol dinleyicisi: {exc}", file=sys.stderr)
     finally:
-        try:
-            consumer.close()
-        except Exception:
-            pass
+        if consumer is not None:
+            try:
+                consumer.close()
+            except Exception:
+                pass
 
 
 def main():
@@ -192,7 +202,15 @@ def main():
     parser.add_argument("--clickhouse-url", default=default_ch_url)
     parser.add_argument("--approaches", default="config/approaches.yaml")
     parser.add_argument("--output-dir", default="experiments/results", help="SUMO tripinfo/summary cikti klasoru")
-    parser.add_argument("--step-delay", type=float, default=0.0, help="Her sim adimi sonrasi bekleme (sn)")
+    parser.add_argument(
+        "--step-delay", type=float, default=float(os.getenv("SIM_STEP_DELAY", "0.0")),
+        help="Her sim adimi sonrasi bekleme (sn). Varsayilan: SIM_STEP_DELAY ortam degiskeni",
+    )
+    parser.add_argument(
+        "--run-start-ms", type=int, default=int(os.getenv("RUN_START_MS", "0")),
+        help="event_time tabani (ms). Kosular arasi monoton artmali (experiments/run_clock.py). "
+             "Verilmezse duvar saati kullanilir.",
+    )
     args = parser.parse_args()
 
     ch_db = os.getenv("CLICKHOUSE_DB", "traffic").strip()
@@ -221,15 +239,21 @@ def main():
     pending_commands: dict = {}
     cmd_lock = threading.Lock()
     stop_event = threading.Event()
+    ready_event = threading.Event()
     listener_thread = None
 
     if args.mode == "adaptive" and not args.dry_run:
         listener_thread = threading.Thread(
             target=start_control_listener,
-            args=(args.bootstrap_servers, args.control_topic, args.run_id, pending_commands, cmd_lock, stop_event),
+            args=(args.bootstrap_servers, args.control_topic, args.run_id,
+                  pending_commands, cmd_lock, stop_event, ready_event),
             daemon=True,
         )
         listener_thread.start()
+        # Dinleyici hazir olmadan simulasyonu baslatma (kontrol komutu kacirilmasin)
+        if not ready_event.wait(timeout=30):
+            stop_event.set()
+            sys.exit("HATA: kontrol dinleyicisi 30 sn icinde hazir olamadi (Kafka erisimi?).")
 
     sumo_binary = "sumo-gui" if args.gui else "sumo"
     sumo_cmd = [
@@ -246,7 +270,11 @@ def main():
     sim_end_time = float(end_elem.attrib["value"]) if end_elem is not None else 2400.0
 
     traci.start(sumo_cmd)
-    run_start_ms = now_ms()
+    run_start_ms = args.run_start_ms if args.run_start_ms > 0 else now_ms()
+    print(
+        f"[START] run_id={args.run_id} scenario={args.scenario} mode={args.mode} seed={args.seed} "
+        f"run_start_ms={run_start_ms} step_delay={args.step_delay} end={sim_end_time}"
+    )
     last_sample_sim_time = -2.0
     sent_count = 0
 

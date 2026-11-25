@@ -21,3 +21,5 @@ data/
 .idea/
 .DS_Store
 
+
+experiments/.run_counter
